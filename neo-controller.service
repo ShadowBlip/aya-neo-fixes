@@ -1,0 +1,9 @@
+[Unit]
+Description=Aya Neo 2021/Next controller fixes service
+After=graphical-session.target
+
+[Service]
+ExecStart=/sbin/python3 /usr/share/ayaneo/neo-controller.py
+
+[Install]
+WantedBy=multi-user.target
