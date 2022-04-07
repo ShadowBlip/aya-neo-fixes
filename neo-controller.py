@@ -29,10 +29,7 @@ xb360.grab()
 keybd.grab()
 
 # Create the virtual controller.
-ui = UInput.from_device(xb360, keybd, name='Aya Neo Controller')#, vendor=int('045e', base=16), product=int('028e', base=16), version=110) #, bustype=3)
-
-print("DEBUG: Initialized device: ", ui)
-print("DEBUG: xb360: ", xb360)
+ui = UInput.from_device(xb360, keybd, name='Aya Neo Controller')
 
 # Track if we pressed our virtual keys so we can send keyup events
 home_pressed = False
@@ -40,7 +37,6 @@ kb_pressed = False
 win_pressed = False
 
 async def capture_events(device):
-    print("DEBUG: ", device)
     global home_pressed
     global kb_pressed
     global win_pressed
@@ -57,11 +53,11 @@ async def capture_events(device):
                 if active == [24, 97, 125] and not kb_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_MODE, 1)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_SELECT, 1)
-                    home_pressed = True
+                    kb_pressed = True
                 elif ev1.code in [24, 97, 125] and kb_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_MODE, 0)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_SELECT, 0)
-                    home_pressed = False
+                    kb_pressed = False
 
                 # Map to all detected screens for docking
                 elif active == [97, 100, 111] and not win_pressed:
@@ -94,11 +90,13 @@ async def capture_events(device):
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_P, 0)
                     win_pressed = False
 
+        # Kill event spam that we don't use
+        if ev1.code in [4, 24, 40, 96, 97, 100, 105, 111, 133] and ev1.type in [e.EV_MSC, e.EV_KEY]:
+            continue
+        
         # Push out all events 
-        #print("DEBUG: sending event: ", ev1)
         ui.write_event(ev1)
         if ev2:
-            #print("DEBUG: sending event: ", ev2)
             ui.write_event(ev2)
         ui.syn()
 
