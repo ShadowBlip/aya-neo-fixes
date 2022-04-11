@@ -9,7 +9,7 @@ Various fixes for the Aya Neo 2021 &amp; 2021 Pro in Linux using systemd.
 # Installing
 - Install the systemd-suspend-modules package.
 - Install the python-evdev package.
-- Run install.sh as root.
+- Run ```make install``` as root.
 
 # Configuring Controller
 Once the controller fix has been installed, the original controller that is detected by steam will not function and you wont have input until you configure the new controller. It is recommended that you use a USB keyboard to set up the controller as the interface is not touch-screen friendly.
@@ -22,3 +22,5 @@ In Big Picture Mode:
 
 I've had good luck setting it as a Generic Gamepad and enabling Generic Gamepad Configuration Support. Please let me know if you have success/issues with setting it as another controller.
 
+# Removing
+- Run ```make clean``` as root.
