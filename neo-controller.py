@@ -7,22 +7,32 @@
 import asyncio
 from evdev import InputDevice, InputEvent, UInput, ecodes as e, categorize
 
-# Get system input event devices
-dmi_info = open("/sys/devices/virtual/dmi/id/product_name", "r")
-sys_id = dmi_info.read().strip()
-sys_type = None
+# Declare global variables
+# Supported system type
+sys_type = None # 2021 or NEXT supported
+
+# Buttons
+quick_pressed = False # Quick Aciton Menu button (2021/NEXT)
+home_pressed = False # Steam/xbox/playstaion button (2021/NEXT)
+kb_pressed = False # OSK Button (2021)
+tm_pressed = False # TM button (2021)
+win_pressed = False # Docking screen replication button (2021)
+
+# Identify the current device type. Kill script if not compatible.
+sys_id = open("/sys/devices/virtual/dmi/id/product_name", "r").read().strip()
+print("sys_id: ", sys_id)
 if sys_id in ["AYANEO 2021 Pro Retro Power", "AYANEO 2021 Pro", "AYANEO 2021"]:
     sys_type = "2021"
-    xb360 = InputDevice('/dev/input/event7')
-    keybd = InputDevice('/dev/input/event4')
 elif sys_id in ["NEXT", "NEXT Pro"]:
     sys_type = "NEXT"
-    xb360 = InputDevice('/dev/input/event6')
-    keybd = InputDevice('/dev/input/event4')
 else:
     print(sys_id, "is not currently supported by this tool. Open an issue on\
  github at https://github.com/ShadowBlip/aya-neo-fixes if this is a bug.")
     exit()
+
+# Get system input event devices
+xb360 = InputDevice('/dev/input/event7') # If touchscreen isn't loaded, event6
+keybd = InputDevice('/dev/input/event4')
 
 # Grab the built-in devices. Prevents double input.
 xb360.grab()
@@ -31,25 +41,26 @@ keybd.grab()
 # Create the virtual controller.
 ui = UInput.from_device(xb360, keybd, name='Aya Neo Controller')
 
-# Track if we pressed our virtual keys so we can send keyup events
-home_pressed = False
-kb_pressed = False
-win_pressed = False
-
 async def capture_events(device):
+    global quick_pressed
     global home_pressed
     global kb_pressed
+    global tm_pressed
     global win_pressed
+    global sys_type
+
     async for event in device.async_read_loop():
+
+        # we use active keys instead of ev1.code as we will override ev1 and
+        # we don't want to trigger additional/different events when doing that
         active= device.active_keys()
-        ev1 = event # pass through the event
+        ev1 = event # pass through the current event, override if needed
         ev2 = None # optional second button (i.e. home + select or super + p)
 
-        # 2021 Model Buttons 
-        # OSK from "KB" button 2021
         match sys_type:
+            # 2021 Model Buttons
             case "2021":
-                # OSK from "KB"
+                # OSK from "KB". Works in-game in BPM but globally in gamepadui
                 if active == [24, 97, 125] and not kb_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_MODE, 1)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_SELECT, 1)
@@ -60,17 +71,32 @@ async def capture_events(device):
                     kb_pressed = False
 
                 # Map to all detected screens for docking
-                elif active == [97, 100, 111] and not win_pressed:
+                elif active == [125] and not win_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_LEFTMETA, 1)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_P, 1)
                     win_pressed = True
-                elif ev1.code in [97, 100, 111] and win_pressed:
+                elif ev1.code == 125 and win_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_LEFTMETA, 0)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_P, 0)
                     win_pressed = False
-    
-        # Next Model Buttons
-        match sys_type:
+
+                # TODO: ID the keycode that the steam deck uses for the "..." button to
+                # bring up the right side action menu. use EV_KEY "ESC", code 1 key for
+                # this action.
+
+                # Quick Action Menu
+                elif active in [1] and not quick_pressed:
+                    quick_pressed = True
+                elif ev1.code  == 1 and quick_pressed:
+                    quick_pressed = False
+
+                # "TM" button. Currently unused
+                elif active == [97, 100, 111] and not tm_pressed:
+                    tm_pressed = True
+                elif ev1.code in [97, 100, 111] and tm_pressed:
+                    tm_pressed = False
+
+            # NEXT Model Buttons
             case "NEXT":
                 # Home Button
                 if active == [96, 105, 133] and not home_pressed:
@@ -79,7 +105,10 @@ async def capture_events(device):
                 elif ev1.code in [96, 105, 133] and home_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_MODE, 0)
                     home_pressed = False
-        
+
+                # TODO: ID the keycode that the steam deck uses for the "..." button to
+                # bring up the right side action menu. Replace below key for this action.
+
                 # Map to all detected screens for docking
                 elif active == [40, 133] and not win_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_LEFTMETA, 1)
@@ -90,17 +119,20 @@ async def capture_events(device):
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_P, 0)
                     win_pressed = False
 
-        # Kill event spam that we don't use
-        if ev1.code in [4, 24, 40, 96, 97, 100, 105, 111, 133] and ev1.type in [e.EV_MSC, e.EV_KEY]:
+        # Kill event spam that we don't use. Keeys output of evtest clean and prevents
+        if ev1.code in [1, 4, 24, 40, 96, 97, 100, 105, 111, 133] and ev1.type in [e.EV_MSC, e.EV_KEY]:
             continue
-        
-        # Push out all events 
+        elif ev1.code in [125] and ev2 == None:
+            continue
+
+        # Push out all events
         ui.write_event(ev1)
         if ev2:
             ui.write_event(ev2)
         ui.syn()
 
 # Run asyncio loop to capture all events
+# TODO: these are deprecated, research and ID new functions.
 for device in xb360, keybd:
     asyncio.ensure_future(capture_events(device))
 loop = asyncio.get_event_loop()
