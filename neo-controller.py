@@ -39,7 +39,7 @@ xb360.grab()
 keybd.grab()
 
 # Create the virtual controller.
-ui = UInput.from_device(xb360, keybd, name='Aya Neo Controller')
+ui = UInput.from_device(xb360, keybd, name='Aya Neo Controller', bustype=3, vendor=int('045e', base=16), product=int('028e', base=16), version=110)
 
 async def capture_events(device):
     global quick_pressed
@@ -60,14 +60,19 @@ async def capture_events(device):
         match sys_type:
             # 2021 Model Buttons
             case "2021":
+                # TODO: shortcut changes from MODE+SELECT to MODE+NORTH when running
+                # export STEAMCMD="steam -gamepadui -steampal -steamos3 -steamdeck"
+                # in the user session. we will need to detect this somehow so it works.
+                # on any install and session.
+
                 # OSK from "KB". Works in-game in BPM but globally in gamepadui
                 if active == [24, 97, 125] and not kb_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_MODE, 1)
-                    ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_SELECT, 1)
+                    ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_NORTH, 1)
                     kb_pressed = True
                 elif ev1.code in [24, 97, 125] and kb_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_MODE, 0)
-                    ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_SELECT, 0)
+                    ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_NORTH, 0)
                     kb_pressed = False
 
                 # Map to all detected screens for docking
@@ -119,7 +124,7 @@ async def capture_events(device):
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_P, 0)
                     win_pressed = False
 
-        # Kill event spam that we don't use. Keeys output of evtest clean and prevents
+        # Kill event spam that we don't use. Keeps output of evtest clean and prevents 
         if ev1.code in [1, 4, 24, 40, 96, 97, 100, 105, 111, 133] and ev1.type in [e.EV_MSC, e.EV_KEY]:
             continue
         elif ev1.code in [125] and ev2 == None:
