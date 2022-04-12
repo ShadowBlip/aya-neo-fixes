@@ -5,7 +5,6 @@ MODULES=$(cat suspend-modules.conf)
 
 echo "Adding WiFi fix for MT7921K"
 cp -v rz608.conf /etc/modprobe.d/
-cp -v 99-rz608.rules /etc/udev/rules.d/
 
 echo "Adding reboot kernel panic fix."
 cp -v mt7921e.shutdown /usr/lib/systemd/system-shutdown
