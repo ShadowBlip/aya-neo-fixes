@@ -19,8 +19,7 @@ for line in $MODULES; do
 done
 
 echo "Enabling unmapped buttons. You will need to manually configure the new controller device in steam."
-mkdir -v /usr/share/ayaneo
-cp -v neo-controller.py /usr/share/ayaneo/
+cp -v neo-controller.py /usr/local/bin/
 cp -v neo-controller.service /etc/systemd/system
 systemctl enable neo-controller && systemctl start neo-controller
 exit 0
