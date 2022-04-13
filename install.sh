@@ -9,13 +9,9 @@ cp -v rz608.conf /etc/modprobe.d/
 echo "Adding reboot kernel panic fix."
 cp -v mt7921e.shutdown /usr/lib/systemd/system-shutdown
 
-echo "Adding suspend-modules fix."
-for line in $MODULES; do
-	if ! grep -Fxq $line /etc/suspend-modules.conf; then
-		echo "Adding $line to /etc/suspend-modules.conf"
-		echo $line >> /etc/suspend-modules.conf
-	fi
-done
+echo "Adding suspend loss of wifi on suspend fix"
+cp -v systemd-suspend-mods.conf /etc/systemd-suspend-mods.conf
+cp -v systemd-suspend-mods.sh /usr/lib/systemd/system-sleep/systemd-suspend-mods.sh
 
 echo "Enabling unmapped buttons. You will need to manually configure the new controller device in steam."
 cp -v neo-controller.py /usr/local/bin/

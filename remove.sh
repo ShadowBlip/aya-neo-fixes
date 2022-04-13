@@ -9,11 +9,9 @@ rm -v /etc/modprobe.d/rz608.conf
 echo "Removing reboot kernel panic fix."
 rm -v /usr/lib/systemd/system-shutdown/mt7921e.shutdown
 
-echo "Removing suspend-modules fix."
-for line in $MODULES; do
-	echo "Removing $line from /etc/suspend-modules.conf"
-	sed -i "/^$line/d" /etc/suspend-modules.conf 	
-done
+echo "Removing loss of WiFi on suspend fix."
+rm -v /etc/systemd-suspend-mods.conf
+rm /usr/lib/systemd/system-sleep/systemd-suspend-mods.sh
 
 echo "Disabling unmapped buttons."
 systemctl stop  neo-controller && systemctl disable neo-controller
