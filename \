@@ -1,13 +1,13 @@
-# Aya Neo Controller
 # Copyright 2022 Derek J. Clark <derekjohn dot clark at gmail dot com>
+# neo-controller.py 
+# Aya Neo Controller evdev mapping
 # This will create a virtual UInput device and pull data from the built-in
-# controller and keyboard. Right side buttons are keyboard buttons that
+# controller and "keyboard". Right side buttons are keyboard buttons that
 # send macros (i.e. CTRL/ALT/DEL). We capture those events and send button
 # presses that Steam understands.
 
 import asyncio
-from evdev import InputDevice, InputEvent, UInput, ecodes as e, categorize, list_devices
-from os import remove
+from evdev import InputDevice, InputEvent, UInput, ecodes as e, categorize
 
 # Declare global variables
 # Supported system type
@@ -19,10 +19,6 @@ home_pressed = False # Steam/xbox/playstaion button (2021/NEXT)
 kb_pressed = False # OSK Button (2021)
 tm_pressed = False # TM button (2021)
 win_pressed = False # Docking screen replication button (2021)
-
-# Device paths
-xb_path = None
-kb_path = None
 
 # Identify the current device type. Kill script if not compatible.
 sys_id = open("/sys/devices/virtual/dmi/id/product_name", "r").read().strip()
@@ -37,35 +33,16 @@ else:
     exit()
 
 # Get system input event devices
-devices_orig = [InputDevice(path) for path in list_devices()]
-
-for device in devices_orig:
-    # Xbox 360 Controller
-    if device.name == 'Microsoft X-Box 360 pad' and device.phys == 'usb-0000:03:00.3-4/input0':
-        xb_path = device.path
-    # Keyboard Device
-    elif device.name == 'AT Translated Set 2 keyboard' and device.phys == 'isa0060/serio0/input0':
-        kb_path = device.path
-    # Delete any steam input devices from the original controller.
-    elif device.phys == "" or device.phys == None:
-        remove(device.path)
-
-if not xb_path or not kb_path:
-    print("Keyboard and xbox360 controller not found. Exiting.")
-    exit()
+xb360 = InputDevice('/dev/input/event7') # If touchscreen isn't loaded, event6. TODO: Detect this.
+keybd = InputDevice('/dev/input/event4')
 
 # Grab the built-in devices. Prevents double input.
-xb360 = InputDevice(xb_path)
+# TODO: Hide the original devices so the original doesn't show in configurations.
 xb360.grab()
-keybd = InputDevice(kb_path)
 keybd.grab()
 
 # Create the virtual controller.
-ui = UInput.from_device(xb360, keybd, name='Aya Neo Controller')#, bustype=3, vendor=int('045e', base=16), product=int('028e', base=16), version=110)
-
-# Delete the reference to the original controllers to hide them from the user/steam.
-remove(xb_path)
-remove(kb_path)
+ui = UInput.from_device(xb360, keybd, name='Aya Neo Controller', bustype=3, vendor=int('045e', base=16), product=int('028e', base=16), version=110)
 
 async def capture_events(device):
     global quick_pressed
@@ -129,12 +106,11 @@ async def capture_events(device):
 
             # NEXT Model Buttons
             case "NEXT":
-                print("DEBUG: Active Keys: ", active)
                 # Home Button
-                if active in [[96, 105, 133], [97, 125, 88]] and not home_pressed:
+                if active == [96, 105, 133] and not home_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_MODE, 1)
                     home_pressed = True
-                elif ev1.code in [88, 96, 97, 105, 125, 133] and home_pressed:
+                elif ev1.code in [96, 105, 133] and home_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_MODE, 0)
                     home_pressed = False
 
@@ -142,16 +118,16 @@ async def capture_events(device):
                 # bring up the right side action menu. Replace below key for this action.
 
                 # Map to all detected screens for docking
-                elif active in [[40, 133], [125, 32]] and not win_pressed:
+                elif active == [40, 133] and not win_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_LEFTMETA, 1)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_P, 1)
                     win_pressed = True
-                elif ev1.code in [32, 40, 125, 133] and win_pressed:
+                elif ev1.code in [40, 133] and win_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_LEFTMETA, 0)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_P, 0)
                     win_pressed = False
 
-        # Kill event spam that we don't use. Keeps output of evtest clean and prevents.
+        # Kill event spam that we don't use. Keeps output of evtest clean and prevents 
         if ev1.code in [1, 4, 24, 40, 96, 97, 100, 105, 111, 133] and ev1.type in [e.EV_MSC, e.EV_KEY]:
             continue
         elif ev1.code in [125] and ev2 == None:
