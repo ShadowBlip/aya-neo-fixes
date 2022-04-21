@@ -38,7 +38,6 @@ else:
 
 # Identify system input event devices.
 devices_orig = [InputDevice(path) for path in list_devices()]
-
 for device in devices_orig:
     # Xbox 360 Controller
     if device.name == 'Microsoft X-Box 360 pad' and device.phys == 'usb-0000:03:00.3-4/input0':
@@ -125,7 +124,7 @@ async def capture_events(device):
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_LEFTCTRL, 1)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_2, 1)
                     quick_pressed = True
-                elif ev1.code in [88, 96, 97, 105, 125, 133] and home_pressed:
+                elif ev1.code in [97, 100, 111] and quick_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_LEFTCTRL, 0)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_2, 0)
                     quick_pressed = False
@@ -135,7 +134,7 @@ async def capture_events(device):
                 if active in [[96, 105, 133], [97, 125, 88]] and not home_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_MODE, 1)
                     home_pressed = True
-                elif ev1.code in [96, 105, 133] and home_pressed:
+                elif ev1.code in [88, 96, 97, 105, 125, 133] and home_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_MODE, 0)
                     home_pressed = False
 
