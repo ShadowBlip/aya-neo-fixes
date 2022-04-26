@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-MODULES=$(cat suspend-modules.conf)
-
 echo "Removing WiFi fix for MT7921K"
 rm -v /etc/modprobe.d/rz608.conf
 
