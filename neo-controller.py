@@ -14,11 +14,11 @@ from os import remove
 sys_type = None # 2021 or NEXT supported
 
 # Buttons
-quick_pressed = False # Quick Aciton Menu button (2021/NEXT)
-home_pressed = False # Steam/xbox/playstaion button (2021/NEXT)
+esc_pressed = False # ESC button (2021)
+home_pressed = False # Steam/xbox/playsation button (NEXT)
 kb_pressed = False # OSK Button (2021)
-tm_pressed = False # TM button (2021)
-win_pressed = False # Docking screen replication button (2021)
+tm_pressed = False # Quick Aciton Menu button (2021, NEXT)
+win_pressed = False # Dock Button (2021)
 
 # Device Paths
 xb_path = None
@@ -27,8 +27,10 @@ kb_path = None
 # Identify the current device type. Kill script if not compatible.
 sys_id = open("/sys/devices/virtual/dmi/id/product_name", "r").read().strip()
 print("sys_id: ", sys_id)
-if sys_id in ["AYANEO 2021 Pro Retro Power", "AYANEO 2021 Pro", "AYANEO 2021"]:
+# All devices from Founders edition through 2021 Pro Retro Power use the same input hardware and keycodes.
+if sys_id in ["AYANEO 2021 Pro Retro Power", "AYANEO 2021 Pro", "AYANEO 2021", "AYA NEO FOUNDERS"]:
     sys_type = "2021"
+# NEXT uses new keycodes and has fewer buttons.
 elif sys_id in ["NEXT"]:
     sys_type = "NEXT"
 else:
@@ -69,22 +71,26 @@ remove(xb_path)
 remove(kb_path)
 
 async def capture_events(device):
-    global quick_pressed
+
+    # Get access to global variables. These are globalized because the funtion
+    # is instanciated twice and need to persist accross both instances.
+    global esc_pressed
     global home_pressed
     global kb_pressed
     global tm_pressed
     global win_pressed
     global sys_type
 
+    # Capture events for the given device.
     async for event in device.async_read_loop():
 
-        # we use active keys instead of ev1.code as we will override ev1 and
+        # We use active keys instead of ev1.code as we will override ev1 and
         # we don't want to trigger additional/different events when doing that
         active= device.active_keys()
         ev1 = event # pass through the current event, override if needed
         ev2 = None # optional second button (i.e. home + select or super + p)
-
         match sys_type:
+
             case "2021": # 2021 Model Buttons
                 # TODO: shortcut changes from MODE+SELECT to MODE+NORTH when running
                 # export STEAMCMD="steam -gamepadui -steampal -steamos3 -steamdeck"
@@ -92,42 +98,45 @@ async def capture_events(device):
                 # on any install and session.
 
                 # KB BUTTON. Open OSK. Works in-game in BPM but globally in gamepadui
-                if active == [24, 97, 125] and not kb_pressed:
+                if active == [24, 97, 125] and not kb_pressed and ev1.value == 1:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_MODE, 1)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_NORTH, 1)
                     kb_pressed = True
-                elif ev1.code in [24, 97, 125] and kb_pressed:
+                elif active == [97] and kb_pressed and ev1.value == 0:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_MODE, 0)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_NORTH, 0)
                     kb_pressed = False
 
                 # WIN BUTTON. Map to all detected screens for docking. Not working
                 # TODO: Get this working. Tried SUPER+P and SUPER+D.
-                elif active == [125] and not win_pressed:
+                # The extra conditions handle pressing WIN while pressing KB since
+                # both use code 125. Letting go of KB first still clears win_pressed
+                # as key 125 is released at the system level.
+                elif not win_pressed and ev1.value in [1,2] and (active == [125] or (active == [24, 97, 125] and kb_pressed)):
                     #ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_LEFTMETA, 1)
                     #ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_D, 1)
                     win_pressed = True
-                elif ev1.code == 125 and win_pressed:
+                elif (active in [[], [24, 97]] and win_pressed) or (active == [125] and ev1.code == 125 and win_pressed and ev1.value == 0):
                     #ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_LEFTMETA, 0)
                     #ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_D, 0)
                     win_pressed = False
 
                 # ESC BUTTON. Unused. Passing so it functions as an "ESC" key for now.
                 # Add 1 to below list if changed.
-                elif active in [1] and not tm_pressed:
-                    tm_pressed = True
-                elif ev1.code  == 1 and tm_pressed:
-                    tm_pressed = False
+                elif ev1.code == 1 and not esc_pressed and ev1.value == 1:
+                    esc_pressed = True
+                elif ev1.code == 1 and esc_pressed and ev1.value == 0:
+                    esc_pressed = False
 
                 # TM BUTTON. Quick Action Menu
-                elif active == [97, 100, 111] and not quick_pressed:
+                elif active == [97, 100, 111] and not tm_pressed and ev1.value == 1:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_LEFTCTRL, 1)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_2, 1)
-                    quick_pressed = True
-                elif ev1.code in [97, 100, 111] and quick_pressed:
+                    tm_pressed = True
+                elif ev1.code in [97, 100, 111] and tm_pressed and ev1.value == 0:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_LEFTCTRL, 0)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_2, 0)
-                    quick_pressed = False
+                    tm_pressed = False
 
             case "NEXT": # NEXT Model Buttons
                 # AYA SPACE BUTTON. Home Button
@@ -139,14 +148,14 @@ async def capture_events(device):
                     home_pressed = False
 
                 # CONFIGURABLE BUTTON. Quick Action Menu.
-                elif active == [40, 133] and not quick_pressed:
+                elif active == [40, 133] and not tm_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_LEFTCTRL, 1)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_2, 1)
-                    quick_pressed = True
-                elif ev1.code in [40, 133] and qucik_pressed:
+                    tm_pressed = True
+                elif ev1.code in [40, 133] and tm_pressed:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_LEFTCTRL, 0)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_2, 0)
-                    quick_pressed = False
+                    tm_pressed = False
 
         # Kill events that we override. Keeps output clean.
         if ev1.code in [4, 24, 40, 96, 97, 100, 105, 111, 133] and ev1.type in [e.EV_MSC, e.EV_KEY]:
