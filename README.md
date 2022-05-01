@@ -7,8 +7,18 @@ Various fixes for the Aya Neo 2021 &amp; 2021 Pro in Linux using systemd.
 - Enables use of buttons on the controller. (depends on python-evdev)
 
 # Installing
+
+## From the AUR
+- Run ```pikaur -S aya-neo-fixes-git``` as root.
+
+## From source
 - Install the python-evdev package.
 - Run ```make install``` as root.
 
 # Removing
+
+## From the AUR
+- Run ```pikaur -R aya-neo-fixes-git``` as root.
+
+## From source
 - Run ```make clean``` as root.
