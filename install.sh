@@ -14,9 +14,6 @@ cp -v systemd-suspend-mods.sh /usr/lib/systemd/system-sleep/systemd-suspend-mods
 echo "Enabling unmapped buttons. NEXT users will need to configure the Home button in steam."
 cp -v neo-controller.py /usr/local/bin/
 cp -v neo-controller.service /etc/systemd/system
-if [ ! -d "/usr/share/liretro/autoconfig/udev" ]; then
-    mkdir -p "/usr/share/libretro/autoconfig/udev"
-fi
-cp -v Aya-Neo-Controller.cfg /usr/share/libretro/autoconfig/udev # retroarch config file
 systemctl enable neo-controller && systemctl start neo-controller
+
 exit 0

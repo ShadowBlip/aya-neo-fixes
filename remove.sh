@@ -15,5 +15,5 @@ echo "Disabling unmapped buttons."
 systemctl stop  neo-controller && systemctl disable neo-controller
 rm -v /etc/systemd/system/neo-controller.service
 rm -v /usr/local/bin/neo-controller.py
-rm -v /usr/share/libretro/autoconfig/udev/Aya-Neo-Controller.cfg
+
 exit 0
