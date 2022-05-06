@@ -6,8 +6,11 @@
 # presses that Steam understands.
 
 import asyncio
+import threading
+
 from evdev import InputDevice, InputEvent, UInput, ecodes as e, categorize, list_devices
 from os import remove
+from time import sleep
 
 # Declare global variables
 # Supported system type
@@ -26,7 +29,7 @@ kb_path = None
 
 # Identify the current device type. Kill script if not compatible.
 sys_id = open("/sys/devices/virtual/dmi/id/product_name", "r").read().strip()
-print("sys_id: ", sys_id)
+
 # All devices from Founders edition through 2021 Pro Retro Power use the same input hardware and keycodes.
 if sys_id in ["AYANEO 2021 Pro Retro Power", "AYA NEO 2021 Pro Retro Power", "AYANEO 2021 Pro", "AYA NEO 2021 Pro", "AYANEO 2021", "AYA NEO 2021", "AYANEO FOUNDERS", "AYA NEO FOUNDERS"]:
     sys_type = "2021"
@@ -48,10 +51,6 @@ for device in devices_orig:
     # Keyboard Device
     elif device.name == 'AT Translated Set 2 keyboard' and device.phys == 'isa0060/serio0/input0':
         kb_path = device.path
-
-    # Delete any steam input devices from the original controller.
-    elif device.phys == "" or device.phys == None:
-        remove(device.path)
 
 if not xb_path or not kb_path:
     print("Keyboard and xbox360 controller not found. Exiting.")
@@ -169,9 +168,27 @@ async def capture_events(device):
             ui.write_event(ev2)
         ui.syn()
 
+def remove_phantoms():
+    loops=0
+    while True:
+        devices_orig = [InputDevice(path) for path in list_devices()]
+        for device in devices_orig:
+            # Delete any steam input devices from the original controller.
+            if device.phys == "" or device.phys == None:
+                remove(device.path)
+                print("Removed ", device.path)
+        if loops <= 10:
+            loops +=1
+            sleep(1)
+        else:
+            break
 # Run asyncio loop to capture all events
 # TODO: these are deprecated, research and ID new functions.
 for device in xb360, keybd:
     asyncio.ensure_future(capture_events(device))
+
+# Look for phantom controllers for a few seconds and delete them.
+t = threading.Thread(target=remove_phantoms())
+t.start()
 loop = asyncio.get_event_loop()
 loop.run_forever()
