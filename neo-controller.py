@@ -28,7 +28,7 @@ kb_path = None
 sys_id = open("/sys/devices/virtual/dmi/id/product_name", "r").read().strip()
 print("sys_id: ", sys_id)
 # All devices from Founders edition through 2021 Pro Retro Power use the same input hardware and keycodes.
-if sys_id in ["AYANEO 2021 Pro Retro Power", "AYANEO 2021 Pro", "AYANEO 2021", "AYA NEO FOUNDERS"]:
+if sys_id in ["AYANEO 2021 Pro Retro Power", "AYA NEO 2021 Pro Retro Power", "AYANEO 2021 Pro", "AYA NEO 2021 Pro", "AYANEO 2021", "AYA NEO 2021", "AYANEO FOUNDERS", "AYA NEO FOUNDERS"]:
     sys_type = "2021"
 # NEXT uses new keycodes and has fewer buttons.
 elif sys_id in ["NEXT"]:
