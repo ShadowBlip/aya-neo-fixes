@@ -16,4 +16,9 @@ cp -v neo-controller.py /usr/local/bin/
 cp -v neo-controller.service /etc/systemd/system
 systemctl enable neo-controller && systemctl start neo-controller
 
+echo "Enabling phantom Steam Input fix."
+cp -v phantom-input.py /usr/local/bin/
+cp -v phantom-input.service /etc/systemd/system
+systemctl enable phantom-input && systemctl start phantom-input
+
 exit 0

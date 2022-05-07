@@ -16,4 +16,8 @@ systemctl stop  neo-controller && systemctl disable neo-controller
 rm -v /etc/systemd/system/neo-controller.service
 rm -v /usr/local/bin/neo-controller.py
 
+echo "Disabling phantom Steam Input fix."
+rm -v /usr/local/bin/phantom-input.py
+rm -v /etc/systemd/system/phantom-input.service
+
 exit 0

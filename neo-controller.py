@@ -6,11 +6,9 @@
 # presses that Steam understands.
 
 import asyncio
-import threading
 
 from evdev import InputDevice, InputEvent, UInput, ecodes as e, categorize, list_devices
 from os import remove
-from time import sleep
 
 # Declare global variables
 # Supported system type
@@ -168,27 +166,10 @@ async def capture_events(device):
             ui.write_event(ev2)
         ui.syn()
 
-def remove_phantoms():
-    loops=0
-    while True:
-        devices_orig = [InputDevice(path) for path in list_devices()]
-        for device in devices_orig:
-            # Delete any steam input devices from the original controller.
-            if device.phys == "" or device.phys == None:
-                remove(device.path)
-                print("Removed ", device.path)
-        if loops <= 10:
-            loops +=1
-            sleep(1)
-        else:
-            break
 # Run asyncio loop to capture all events
 # TODO: these are deprecated, research and ID new functions.
 for device in xb360, keybd:
     asyncio.ensure_future(capture_events(device))
 
-# Look for phantom controllers for a few seconds and delete them.
-t = threading.Thread(target=remove_phantoms())
-t.start()
 loop = asyncio.get_event_loop()
 loop.run_forever()
