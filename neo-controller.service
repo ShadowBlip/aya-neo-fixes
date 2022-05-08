@@ -4,6 +4,7 @@ After=graphical-session.target
 
 [Service]
 ExecStart=/sbin/python3 /usr/local/bin/neo-controller.py
+ExecStopPost= /sbin/systemctl stop phantom-input.service
 
 [Install]
 WantedBy=multi-user.target

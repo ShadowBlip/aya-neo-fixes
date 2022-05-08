@@ -1,6 +1,7 @@
 [Unit]
 Description=Removes Phantom Input Devices
 After=neo-controller.service
+PartOf=neo-controller.service
 
 [Service]
 ExecStart=/sbin/python3 /usr/local/bin/phantom-input.py

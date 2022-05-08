@@ -12,11 +12,12 @@ rm -v /etc/systemd-suspend-mods.conf
 rm /usr/lib/systemd/system-sleep/systemd-suspend-mods.sh
 
 echo "Disabling unmapped buttons."
-systemctl stop  neo-controller && systemctl disable neo-controller
+systemctl stop neo-controller && systemctl disable neo-controller
 rm -v /etc/systemd/system/neo-controller.service
 rm -v /usr/local/bin/neo-controller.py
 
 echo "Disabling phantom Steam Input fix."
+systemctl stop phantom-input && systemctl disable phantom-input
 rm -v /usr/local/bin/phantom-input.py
 rm -v /etc/systemd/system/phantom-input.service
 
