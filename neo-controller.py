@@ -14,12 +14,12 @@ from os import remove
 # Supported system type
 sys_type = None # 2021 or NEXT supported
 
-# Buttons
-esc_pressed = False # ESC button (2021)
-home_pressed = False # Steam/xbox/playsation button (NEXT)
-kb_pressed = False # OSK Button (2021)
-tm_pressed = False # Quick Aciton Menu button (2021, NEXT)
-win_pressed = False # Dock Button (2021)
+# Track button on/off (prevents spam presses)
+esc_pressed = False # ESC button (GEN1)
+home_pressed = False # Steam/xbox/playsation button (GEN2)
+kb_pressed = False # OSK Button (GEN1)
+tm_pressed = False # Quick Aciton Menu button (GEN1, GEN2)
+win_pressed = False # Dock Button (GEN1)
 
 # Device Paths
 xb_path = None
@@ -41,10 +41,17 @@ if sys_id in ["AYANEO 2021 Pro Retro Power",
         "AYANEO FOUNDER",
         "AYA NEO FOUNDER",
         ]:
-    sys_type = "2021"
+    sys_type = "GEN1"
+
 # NEXT uses new keycodes and has fewer buttons.
-elif sys_id in ["NEXT"]:
-    sys_type = "NEXT"
+elif sys_id in ["NEXT",
+        "Next Pro",
+        "AYA NEO NEXT Pro"
+        "AYANEO NEXT Pro",
+        ]:
+    sys_type = "GEN2"
+
+# Block devices that aren't supported as this could cause issues.
 else:
     print(sys_id, "is not currently supported by this tool. Open an issue on\
  github at https://github.com/ShadowBlip/aya-neo-fixes if this is a bug.")
@@ -61,8 +68,13 @@ for device in devices_orig:
     elif device.name == 'AT Translated Set 2 keyboard' and device.phys == 'isa0060/serio0/input0':
         kb_path = device.path
 
+# Catch if devices weren't found. This usually happens if the service was restarted.
+#TODO: Find a way to look for devices if service has already run once so the system
+# won't require a restart.
 if not xb_path or not kb_path:
-    print("Keyboard and xbox360 controller not found. Exiting.")
+    print("Keyboard and/or X-Box 360 controller not found.") 
+    print("If this service has already been run once, try rebooting.")
+    print("Exiting...")
     exit()
 
 # Grab the built-in devices. Prevents double input.
@@ -99,7 +111,7 @@ async def capture_events(device):
         ev2 = None # optional second button (i.e. home + select or super + p)
         match sys_type:
 
-            case "2021": # 2021 Model Buttons
+            case "GEN1": # 2021 Models and previous.
                 # TODO: shortcut changes from MODE+SELECT to MODE+NORTH when running
                 # export STEAMCMD="steam -gamepadui -steampal -steamos3 -steamdeck"
                 # in the user session. We will need to detect this somehow so it works.
@@ -146,27 +158,29 @@ async def capture_events(device):
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_2, 0)
                     tm_pressed = False
 
-            case "NEXT": # NEXT Model Buttons
-                # AYA SPACE BUTTON. Home Button
-                if active in [[96, 105, 133], [97, 125, 88]] and not home_pressed:
+            case "GEN2": # NEXT Model and beyond.
+                # AYA SPACE BUTTON. -> Home Button
+                if active in [[96, 105, 133], [97, 125, 88]] and not home_pressed and ev1.value == 1:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_MODE, 1)
                     home_pressed = True
-                elif ev1.code in [88, 96, 97, 105, 125, 133] and home_pressed:
+                elif ev1.code in [88, 96, 97, 105, 133] and home_pressed and ev1.value == 0:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_MODE, 0)
                     home_pressed = False
 
-                # CONFIGURABLE BUTTON. Quick Action Menu.
-                elif active == [40, 133] and not tm_pressed:
+                # CONFIGURABLE BUTTON. -> Quick Action Menu.
+                # NOTE: Some NEXT models use SUPER+D, Aya may be trying to use this as fullscreen docking.
+                # TODO: Investigate if configuring in AYA SPACE changes these keycodes in firmware.
+                elif active in [[40, 133], [125, 32]] and not tm_pressed and ev1.value == 1:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_LEFTCTRL, 1)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_2, 1)
                     tm_pressed = True
-                elif ev1.code in [40, 133] and tm_pressed:
+                elif ev1.code in [40, 133, 32] and tm_pressed and ev1.value == 0:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_LEFTCTRL, 0)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_2, 0)
                     tm_pressed = False
 
         # Kill events that we override. Keeps output clean.
-        if ev1.code in [4, 24, 40, 96, 97, 100, 105, 111, 133] and ev1.type in [e.EV_MSC, e.EV_KEY]:
+        if ev1.code in [4, 24, 32, 40, 88, 96, 97, 100, 105, 111, 133] and ev1.type in [e.EV_MSC, e.EV_KEY]:
             continue # Add 1 to list if ESC used above
         elif ev1.code in [125] and ev2 == None: # Only kill KEY_LEFTMETA if its not used as a key combo.
             continue
@@ -179,6 +193,7 @@ async def capture_events(device):
 
 # Run asyncio loop to capture all events
 # TODO: these are deprecated, research and ID new functions.
+# NOTE: asyncio api will need update to fix. Maybe supress error for clean logs?
 for device in xb360, keybd:
     asyncio.ensure_future(capture_events(device))
 
