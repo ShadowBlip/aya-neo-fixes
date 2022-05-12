@@ -171,7 +171,7 @@ async def capture_events(device):
                 # CONFIGURABLE BUTTON. -> Quick Action Menu.
                 # NOTE: Some NEXT models use SUPER+D, Aya may be trying to use this as fullscreen docking.
                 # TODO: Investigate if configuring in AYA SPACE changes these keycodes in firmware.
-                elif active in [[40, 133], [125, 32]] and not tm_pressed and ev1.value == 1:
+                elif active in [[40, 133], [32, 125]] and not tm_pressed and ev1.value == 1:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_LEFTCTRL, 1)
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_2, 1)
                     tm_pressed = True
