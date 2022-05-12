@@ -1,3 +1,4 @@
+#!/sbin/python3
 # Aya Neo Controller
 # Copyright 2022 Derek J. Clark <derekjohn dot clark at gmail dot com>
 # This will create a virtual UInput device and pull data from the built-in
@@ -46,7 +47,7 @@ if sys_id in ["AYANEO 2021 Pro Retro Power",
 # NEXT uses new keycodes and has fewer buttons.
 elif sys_id in ["NEXT",
         "Next Pro",
-        "AYA NEO NEXT Pro"
+        "AYA NEO NEXT Pro",
         "AYANEO NEXT Pro",
         ]:
     sys_type = "GEN2"
