@@ -114,8 +114,7 @@ github at https://github.com/ShadowBlip/aya-neo-fixes if this is a bug.")
     xb360.grab()
 
     # Create the virtual controller.
-    #ui = UInput.from_device(xb360, keybd, name='Aya Neo Controller', bustype=3, vendor=int('045e', base=16), product=int('028e', base=16), version=110)
-    ui = UInput.from_device(keybd, name='Aya Neo Controller', bustype=3, vendor=int('045e', base=16), product=int('028e', base=16), version=110)
+    ui = UInput.from_device(xb360, keybd, name='Aya Neo Controller', bustype=3, vendor=int('045e', base=16), product=int('028e', base=16), version=110)
 
     # Move the reference to the original controllers to hide them from the user/steam.
     os.makedirs(hide_path, exist_ok=True)
@@ -243,9 +242,8 @@ def main():
     # Run asyncio loop to capture all events
     # TODO: these are deprecated, research and ID new functions.
     # NOTE: asyncio api will need update to fix. Maybe supress error for clean logs?
-    #for device in xb360, keybd:
-    #    asyncio.ensure_future(capture_events(device))
-    asyncio.ensure_future(capture_events(keybd))
+    for device in xb360, keybd:
+        asyncio.ensure_future(capture_events(device))
 
     loop = asyncio.get_event_loop()
     loop.run_forever()
