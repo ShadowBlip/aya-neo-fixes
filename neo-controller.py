@@ -197,7 +197,7 @@ async def capture_events(device):
 
             case "GEN2": # NEXT Model and beyond.
                 # AYA SPACE BUTTON. -> Home Button
-                if active in [[96, 105, 133], [97, 125, 88]] and not home_pressed and ev1.value == 1:
+                if active in [[96, 105, 133], [97, 125, 88], [88, 97, 125]] and not home_pressed and ev1.value == 1:
                     ev1 = InputEvent(event.sec, event.usec, e.EV_KEY, e.BTN_MODE, 1)
                     home_pressed = True
                 elif ev1.code in [88, 96, 97, 105, 133] and home_pressed and ev1.value == 0:
