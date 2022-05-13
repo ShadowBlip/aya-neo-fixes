@@ -7,9 +7,13 @@
 # presses that Steam understands.
 
 import asyncio
+import os
+import sys
 
 from evdev import InputDevice, InputEvent, UInput, ecodes as e, categorize, list_devices
-from os import remove
+from pathlib import PurePath as p
+from shutil import move
+from time import sleep
 
 # Declare global variables
 # Supported system type
@@ -22,74 +26,101 @@ kb_pressed = False # OSK Button (GEN1)
 tm_pressed = False # Quick Aciton Menu button (GEN1, GEN2)
 win_pressed = False # Dock Button (GEN1)
 
-# Device Paths
-xb_path = None
+# Devices
+keybd = None
+ui = None
+xb360 = None
+
+# Paths
+hide_path = "/dev/input/.hidden/"
+kb_event = None
 kb_path = None
+xb_event = None
+xb_path = None
 
-# Identify the current device type. Kill script if not compatible.
-sys_id = open("/sys/devices/virtual/dmi/id/product_name", "r").read().strip()
+def __init():
 
-# All devices from Founders edition through 2021 Pro Retro Power use the same 
-# input hardware and keycodes.
-if sys_id in ["AYANEO 2021 Pro Retro Power",
-        "AYA NEO 2021 Pro Retro Power",
-        "AYANEO 2021 Pro",
-        "AYA NEO 2021 Pro",
-        "AYANEO 2021",
-        "AYA NEO 2021",
-        "AYANEO FOUNDERS",
-        "AYA NEO FOUNDERS",
-        "AYANEO FOUNDER",
-        "AYA NEO FOUNDER",
-        ]:
-    sys_type = "GEN1"
+    global kb_event
+    global kb_path
+    global keybd
+    global sys_type
+    global xb360
+    global xb_event
+    global xb_path
+    global ui
 
-# NEXT uses new keycodes and has fewer buttons.
-elif sys_id in ["NEXT",
-        "Next Pro",
-        "AYA NEO NEXT Pro",
-        "AYANEO NEXT Pro",
-        ]:
-    sys_type = "GEN2"
+    # Identify the current device type. Kill script if not compatible.
+    sys_id = open("/sys/devices/virtual/dmi/id/product_name", "r").read().strip()
 
-# Block devices that aren't supported as this could cause issues.
-else:
-    print(sys_id, "is not currently supported by this tool. Open an issue on\
- github at https://github.com/ShadowBlip/aya-neo-fixes if this is a bug.")
-    exit()
+    # All devices from Founders edition through 2021 Pro Retro Power use the same 
+    # input hardware and keycodes.
+    if sys_id in ["AYANEO 2021 Pro Retro Power",
+            "AYA NEO 2021 Pro Retro Power",
+            "AYANEO 2021 Pro",
+            "AYA NEO 2021 Pro",
+            "AYANEO 2021",
+            "AYA NEO 2021",
+            "AYANEO FOUNDERS",
+            "AYA NEO FOUNDERS",
+            "AYANEO FOUNDER",
+            "AYA NEO FOUNDER",
+            ]:
+        sys_type = "GEN1"
 
-# Identify system input event devices.
-devices_orig = [InputDevice(path) for path in list_devices()]
-for device in devices_orig:
-    # Xbox 360 Controller
-    if device.name == 'Microsoft X-Box 360 pad' and device.phys == 'usb-0000:03:00.3-4/input0':
-        xb_path = device.path
+    # NEXT uses new keycodes and has fewer buttons.
+    elif sys_id in ["NEXT",
+            "Next Pro",
+            "AYA NEO NEXT Pro",
+            "AYANEO NEXT Pro",
+            ]:
+        sys_type = "GEN2"
 
-    # Keyboard Device
-    elif device.name == 'AT Translated Set 2 keyboard' and device.phys == 'isa0060/serio0/input0':
-        kb_path = device.path
+    # Block devices that aren't supported as this could cause issues.
+    else:
+        print(sys_id, "is not currently supported by this tool. Open an issue on \
+github at https://github.com/ShadowBlip/aya-neo-fixes if this is a bug.")
+        exit(1)
 
-# Catch if devices weren't found. This usually happens if the service was restarted.
-#TODO: Find a way to look for devices if service has already run once so the system
-# won't require a restart.
-if not xb_path or not kb_path:
-    print("Keyboard and/or X-Box 360 controller not found.") 
-    print("If this service has already been run once, try rebooting.")
-    print("Exiting...")
-    exit()
+    # Identify system input event devices.
+    attempts = 0
+    while attempts < 3:
+        devices_orig = [InputDevice(path) for path in list_devices()]
+        for device in devices_orig:
+            print(device)
+            # Xbox 360 Controller
+            if device.name == 'Microsoft X-Box 360 pad' and device.phys == 'usb-0000:03:00.3-4/input0':
+                xb_path = device.path
 
-# Grab the built-in devices. Prevents double input.
-xb360 = InputDevice(xb_path)
-xb360.grab()
-keybd = InputDevice(kb_path)
-keybd.grab()
+            # Keyboard Device
+            elif device.name == 'AT Translated Set 2 keyboard' and device.phys == 'isa0060/serio0/input0':
+                kb_path = device.path
+        attempts += 1
+        sleep(1)
+    # Catch if devices weren't found. This usually happens if the service was restarted.
+    if not xb_path or not kb_path:
+        print("Keyboard and/or X-Box 360 controller not found.") 
+        print("If this service has already been run once, try rebooting.")
+        print("Exiting...")
+        exit(1)
 
-# Create the virtual controller.
-ui = UInput.from_device(xb360, keybd, name='Aya Neo Controller', bustype=3, vendor=int('045e', base=16), product=int('028e', base=16), version=110)
+    # Grab the built-in devices. Prevents double input.
+    keybd = InputDevice(kb_path)
+    keybd.grab()
+    xb360 = InputDevice(xb_path)
+    xb360.grab()
 
-# Delete the reference to the original controllers to hide them from the user/steam.
-remove(xb_path)
-remove(kb_path)
+    # Create the virtual controller.
+    #ui = UInput.from_device(xb360, keybd, name='Aya Neo Controller', bustype=3, vendor=int('045e', base=16), product=int('028e', base=16), version=110)
+    ui = UInput.from_device(keybd, name='Aya Neo Controller', bustype=3, vendor=int('045e', base=16), product=int('028e', base=16), version=110)
+
+    # Move the reference to the original controllers to hide them from the user/steam.
+    os.makedirs(hide_path, exist_ok=True)
+    
+    kb_event = p(kb_path).name
+    move(kb_path, hide_path+kb_event)
+    
+    xb_event = p(xb_path).name
+    move(xb_path, hide_path+xb_event)
 
 async def capture_events(device):
 
@@ -101,13 +132,15 @@ async def capture_events(device):
     global tm_pressed
     global win_pressed
     global sys_type
-
+    
     # Capture events for the given device.
     async for event in device.async_read_loop():
 
         # We use active keys instead of ev1.code as we will override ev1 and
         # we don't want to trigger additional/different events when doing that
         active= device.active_keys()
+        if active:
+            print("Active Keys: ", active)
         ev1 = event # pass through the current event, override if needed
         ev2 = None # optional second button (i.e. home + select or super + p)
         match sys_type:
@@ -192,11 +225,31 @@ async def capture_events(device):
             ui.write_event(ev2)
         ui.syn()
 
-# Run asyncio loop to capture all events
-# TODO: these are deprecated, research and ID new functions.
-# NOTE: asyncio api will need update to fix. Maybe supress error for clean logs?
-for device in xb360, keybd:
-    asyncio.ensure_future(capture_events(device))
+def restore():
+    move(hide_path+kb_event, kb_path)
+    move(hide_path+xb_event, xb_path)
 
-loop = asyncio.get_event_loop()
-loop.run_forever()
+
+def main():
+    # Run asyncio loop to capture all events
+    # TODO: these are deprecated, research and ID new functions.
+    # NOTE: asyncio api will need update to fix. Maybe supress error for clean logs?
+    #for device in xb360, keybd:
+    #    asyncio.ensure_future(capture_events(device))
+    asyncio.ensure_future(capture_events(keybd))
+
+    loop = asyncio.get_event_loop()
+    loop.run_forever()
+
+if __name__ == "__main__":
+    try:
+        __init()
+        main()
+    
+    except KeyboardInterrupt:
+        print('Interrupt called. Restoring Devices.')
+        restore()
+        try:
+            sys.exit(0)
+        except SystemExit:
+            os._exit(0)

@@ -9,6 +9,8 @@ Various fixes for the Aya Neo 2021 &amp; 2021 Pro in Linux using systemd.
 
 ## From the AUR
 - Run ```pikaur -S aya-neo-fixes-git``` as root.
+- Run ```systemctl enable neo-controller``` as root.
+- Run ```systemctl start neo-controller``` as root.
 
 ## From source
 - Install the python-evdev package.
