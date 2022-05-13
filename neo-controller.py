@@ -8,6 +8,7 @@
 
 import asyncio
 import os
+import signal
 import sys
 
 from evdev import InputDevice, InputEvent, UInput, ecodes as e, categorize, list_devices
@@ -38,7 +39,7 @@ kb_path = None
 xb_event = None
 xb_path = None
 
-def __init():
+def __init__():
 
     global kb_event
     global kb_path
@@ -94,8 +95,11 @@ github at https://github.com/ShadowBlip/aya-neo-fixes if this is a bug.")
             # Keyboard Device
             elif device.name == 'AT Translated Set 2 keyboard' and device.phys == 'isa0060/serio0/input0':
                 kb_path = device.path
-        attempts += 1
-        sleep(1)
+        if not xb_path or not kb_path:
+            attempts += 1
+            sleep(1)
+        else:
+            break
     # Catch if devices weren't found. This usually happens if the service was restarted.
     if not xb_path or not kb_path:
         print("Keyboard and/or X-Box 360 controller not found.") 
@@ -138,7 +142,7 @@ async def capture_events(device):
 
         # We use active keys instead of ev1.code as we will override ev1 and
         # we don't want to trigger additional/different events when doing that
-        active= device.active_keys()
+        active = device.active_keys()
         if active:
             print("Active Keys: ", active)
         ev1 = event # pass through the current event, override if needed
@@ -226,8 +230,13 @@ async def capture_events(device):
         ui.syn()
 
 def restore():
+    print('Stop Called. Restoring Devices.')
     move(hide_path+kb_event, kb_path)
     move(hide_path+xb_event, xb_path)
+    try:
+        sys.exit(0)
+    except SystemExit:
+        os._exit(0)
 
 
 def main():
@@ -241,15 +250,22 @@ def main():
     loop = asyncio.get_event_loop()
     loop.run_forever()
 
+class GracefulKiller:
+  kill_now = False
+  def __init__(self):
+    signal.signal(signal.SIGINT, self.exit_gracefully)
+    signal.signal(signal.SIGTERM, self.exit_gracefully)
+
+  def exit_gracefully(self, *args):
+    self.kill_now = True
+
 if __name__ == "__main__":
-    try:
-        __init()
-        main()
-    
-    except KeyboardInterrupt:
-        print('Interrupt called. Restoring Devices.')
-        restore()
+    killer = GracefulKiller()
+    while not killer.kill_now:
         try:
-            sys.exit(0)
-        except SystemExit:
-            os._exit(0)
+            __init__()
+            main()
+
+        except KeyboardInterrupt:
+            restore()
+    restore()

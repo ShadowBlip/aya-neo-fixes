@@ -1,3 +1,5 @@
+#!/sbin/python3
+
 from evdev import InputDevice, list_devices
 from os import remove
 from time import sleep
