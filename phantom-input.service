@@ -1,5 +1,5 @@
 [Unit]
-Description=Removes Phantom Input Devices
+Description=Remove phantom input devices
 After=neo-controller.service
 PartOf=neo-controller.service
 

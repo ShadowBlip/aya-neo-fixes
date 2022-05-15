@@ -135,15 +135,14 @@ async def capture_events(device):
     global tm_pressed
     global win_pressed
     global sys_type
-    
+
     # Capture events for the given device.
     async for event in device.async_read_loop():
 
         # We use active keys instead of ev1.code as we will override ev1 and
         # we don't want to trigger additional/different events when doing that
         active = device.active_keys()
-        if active:
-            print("Active Keys: ", active)
+
         ev1 = event # pass through the current event, override if needed
         ev2 = None # optional second button (i.e. home + select or super + p)
         match sys_type:

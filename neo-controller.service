@@ -1,5 +1,5 @@
 [Unit]
-Description=Aya Neo 2021/Next controller fixes service
+Description=Aya Neo device family controller
 After=graphical-session.target
 
 [Service]
