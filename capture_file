@@ -1,0 +1,10 @@
+System ID: THINN-15
+
+X-Box 360 Device: 
+
+keyboard Device: AT Translated Set 2 keyboard | isa0060/serio0/input0 | bustype: 17vendor: 1product: 1version: 43907
+
+All Devices:
+Logitech M705 | usb-0000:04:00.3-2/input2:1 | bustype: 3vendor: 1133product: 16493version: 273HD Webcam: IR Camera | usb-0000:04:00.3-3/button | bustype: 3vendor: 1266product: 46731version: 8HD Webcam: HD Webcam | usb-0000:04:00.3-3/button | bustype: 3vendor: 1266product: 46731version: 8HD-Audio Generic Headphone | ALSA | bustype: 0vendor: 0product: 0version: 0HD-Audio Generic Mic | ALSA | bustype: 0vendor: 0product: 0version: 0HD-Audio Generic HDMI/DP,pcm=3 | ALSA | bustype: 0vendor: 0product: 0version: 0UNIW0001:00 093A:0255 Touchpad | i2c-UNIW0001:00 | bustype: 24vendor: 2362product: 597version: 256UNIW0001:00 093A:0255 Mouse | i2c-UNIW0001:00 | bustype: 24vendor: 2362product: 597version: 256PC Speaker | isa0061/input0 | bustype: 16vendor: 31product: 1version: 256Video Bus | LNXVIDEO/video/input0 | bustype: 25vendor: 0product: 6version: 0AT Translated Set 2 keyboard | isa0060/serio0/input0 | bustype: 17vendor: 1product: 1version: 43907Power Button | LNXPWRBN/button/input0 | bustype: 25vendor: 0product: 1version: 0Lid Switch | PNP0C0D/button/input0 | bustype: 25vendor: 0product: 5version: 0Sleep Button | PNP0C0E/button/input0 | bustype: 25vendor: 0product: 3version: 0Power Button | PNP0C0C/button/input0 | bustype: 25vendor: 0product: 1version: 0
+
+Captured Keymaps:

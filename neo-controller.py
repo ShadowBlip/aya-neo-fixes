@@ -79,7 +79,9 @@ def __init__():
     # Block devices that aren't supported as this could cause issues.
     else:
         print(sys_id, "is not currently supported by this tool. Open an issue on \
-github at https://github.com/ShadowBlip/aya-neo-fixes if this is a bug.")
+GitHub at https://github.com/ShadowBlip/aya-neo-fixes if this is a bug. If possible,\
+please run the capture-system.py utility found on the GitHub repository and upload\
+that file with your issue.")
         exit(1)
 
     # Identify system input event devices.
@@ -235,6 +237,8 @@ def restore():
         sys.exit(0)
     except SystemExit:
         os._exit(0)
+    finally:
+        exit(0)
 
 
 def main():

@@ -43,7 +43,16 @@ It is typically easiest to use the touchscreen or an external keyboard to perfor
 # Contributing
 
 ## Add New Device to neo-controller service
-Please open a bug in [issues](https://github.com/ShadowBlip/aya-neo-fixes/issues) with the following information:
+Please open a bug in [issues](https://github.com/ShadowBlip/aya-neo-fixes/issues).
+
+There are two methods of provding the data.
+
+### Option 1: capture-system.py (preferred)
+- Run ```sudo python capture-system.py``` from the git clone directory and upload the generated file to your issue, along with any other pertinant information.
+
+### Option 2: Manual Data Capture
+
+Post the following information to your github issue:
 - Output of ```cat /sys/devices/virtual/dmi/id/product_name```
 - Output of ```cat /proc/bus/input/devices```
 
