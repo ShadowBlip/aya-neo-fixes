@@ -88,7 +88,14 @@ that file with your issue.")
     # Identify system input event devices.
     attempts = 0
     while attempts < 3:
-        devices_orig = [InputDevice(path) for path in list_devices()]
+        try:
+            devices_orig = [InputDevice(path) for path in list_devices()]
+        # Some funky stuff happens sometimes when booting. Give it another shot.
+        except OSError:
+            attempts += 1
+            sleep(1)
+            continue
+
         for device in devices_orig:
 
             # Xbox 360 Controller
@@ -236,9 +243,16 @@ async def capture_events(device):
 
 # Gracefull shutdown.
 async def restore(signal, loop, manager):
-    print('Receved exit signal: '+signal.name+'. Restoring Devices.')
-    manager.StopUnit('phantom-input.service', 'fail')
 
+    print('Receved exit signal: '+signal.name+'. Restoring Devices.')
+
+    # systemctl stop will trigger here. System shutdown already stops service so we can ignore
+    try:
+        manager.StopUnit('phantom-input.service', 'fail')
+    except dbus.exceptions.DBusException:
+        pass
+
+    # Both devices threads will attempt this, so ignore if they have been moved.
     try:
         move(hide_path+kb_event, kb_path)
     except FileNotFoundError:
@@ -248,6 +262,7 @@ async def restore(signal, loop, manager):
     except FileNotFoundError:
         pass
 
+    # Kill all tasks. They are infinite loops so we will wait forver.
     tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
     for task in tasks:
         task.cancel()
@@ -265,6 +280,8 @@ def main():
     # Start the phanton-input service that removes buggy steam-input devices.
     systemd1 = dbus.SystemBus().get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
     manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
+
+    # Start the phantom-input service.
     manager.StartUnit('phantom-input.service', 'fail')
 
     # Run asyncio loop to capture all events.
