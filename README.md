@@ -10,14 +10,11 @@ Various fixes for the Aya Neo family of handheld consoles in Linux using systemd
 ## From the AUR
 - Run ```pikaur -S aya-neo-fixes-git``` as root.
 - Run ```systemctl enable neo-controller``` as root.
-- Run ```systemctl enable phantom-input``` as root.
 - Run ```systemctl start neo-controller``` as root.
-- Run ```systemctl start phantom-input``` as root.
 
 ## From source
 - Install the python-evdev package.
 - Run ```make install``` as root.
-
 
 # Steam Configuration
 After installing the package and enabling the services, Aya Neo NEXT devices require an additional step to fully configure the Home/Guide/Xbox button.

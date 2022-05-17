@@ -166,13 +166,8 @@ required after uploading your capture file to fully integrate your device.')
         return
 
     # Run asyncio loop to capture all events
-    if xb360:
-        asyncio.ensure_future(capture_events(xb360))
-    if keybd:
-        asyncio.ensure_future(capture_events(keybd))
-    
-    if not xb360 and not keybd:
-        killer.alive = False
+    asyncio.ensure_future(capture_events(xb360))
+    asyncio.ensure_future(capture_events(keybd))
         
     loop = asyncio.get_event_loop()
     loop.run_forever()

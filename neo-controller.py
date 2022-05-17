@@ -10,6 +10,7 @@ import asyncio
 import os
 import signal
 import sys
+import dbus
 
 from evdev import InputDevice, InputEvent, UInput, ecodes as e, categorize, list_devices
 from pathlib import PurePath as p
@@ -79,8 +80,8 @@ def __init__():
     # Block devices that aren't supported as this could cause issues.
     else:
         print(sys_id, "is not currently supported by this tool. Open an issue on \
-GitHub at https://github.com/ShadowBlip/aya-neo-fixes if this is a bug. If possible,\
-please run the capture-system.py utility found on the GitHub repository and upload\
+GitHub at https://github.com/ShadowBlip/aya-neo-fixes if this is a bug. If possible, \
+please run the capture-system.py utility found on the GitHub repository and upload \
 that file with your issue.")
         exit(1)
 
@@ -89,7 +90,7 @@ that file with your issue.")
     while attempts < 3:
         devices_orig = [InputDevice(path) for path in list_devices()]
         for device in devices_orig:
-            print(device)
+
             # Xbox 360 Controller
             if device.name == 'Microsoft X-Box 360 pad' and device.phys == 'usb-0000:03:00.3-4/input0':
                 xb_path = device.path
@@ -97,16 +98,19 @@ that file with your issue.")
             # Keyboard Device
             elif device.name == 'AT Translated Set 2 keyboard' and device.phys == 'isa0060/serio0/input0':
                 kb_path = device.path
+
+        # Sometimes the service loads before all input devices have full initialized. Try a few times.
         if not xb_path or not kb_path:
             attempts += 1
             sleep(1)
         else:
             break
-    # Catch if devices weren't found. This usually happens if the service was restarted.
+
+    # Catch if devices weren't found.
     if not xb_path or not kb_path:
-        print("Keyboard and/or X-Box 360 controller not found.") 
-        print("If this service has already been run once, try rebooting.")
-        print("Exiting...")
+        print("Keyboard and/or X-Box 360 controller not found.\n \
+If this service has previously been started, try rebooting.\n \
+Exiting...")
         exit(1)
 
     # Grab the built-in devices. Prevents double input.
@@ -120,13 +124,13 @@ that file with your issue.")
 
     # Move the reference to the original controllers to hide them from the user/steam.
     os.makedirs(hide_path, exist_ok=True)
-    
     kb_event = p(kb_path).name
     move(kb_path, hide_path+kb_event)
-    
     xb_event = p(xb_path).name
     move(xb_path, hide_path+xb_event)
 
+
+# Captures physical dvice events and translates them to virtual device events.
 async def capture_events(device):
 
     # Get access to global variables. These are globalized because the funtion
@@ -229,44 +233,59 @@ async def capture_events(device):
             ui.write_event(ev2)
         ui.syn()
 
-def restore():
-    print('Stop Called. Restoring Devices.')
-    move(hide_path+kb_event, kb_path)
-    move(hide_path+xb_event, xb_path)
+
+# Gracefull shutdown.
+async def restore(signal, loop, manager):
+    print('Receved exit signal: '+signal.name+'. Restoring Devices.')
+    manager.StopUnit('phantom-input.service', 'fail')
+
     try:
-        sys.exit(0)
-    except SystemExit:
-        os._exit(0)
-    finally:
-        exit(0)
+        move(hide_path+kb_event, kb_path)
+    except FileNotFoundError:
+        pass
+    try:
+        move(hide_path+xb_event, xb_path)
+    except FileNotFoundError:
+        pass
+
+    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+    for task in tasks:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+    loop.stop()
+    print("Device restore complete. Stopping...")
 
 
+# Main loop
 def main():
-    # Run asyncio loop to capture all events
+
+    # Start the phanton-input service that removes buggy steam-input devices.
+    systemd1 = dbus.SystemBus().get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
+    manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
+    manager.StartUnit('phantom-input.service', 'fail')
+
+    # Run asyncio loop to capture all events.
     # TODO: these are deprecated, research and ID new functions.
     # NOTE: asyncio api will need update to fix. Maybe supress error for clean logs?
     for device in xb360, keybd:
         asyncio.ensure_future(capture_events(device))
 
     loop = asyncio.get_event_loop()
-    loop.run_forever()
 
-class GracefulKiller:
-  kill_now = False
-  def __init__(self):
-    signal.signal(signal.SIGINT, self.exit_gracefully)
-    signal.signal(signal.SIGTERM, self.exit_gracefully)
+    # Establish signaling to handle gracefull shutdown.
+    signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT, signal.SIGQUIT)
+    for s in signals:
+        loop.add_signal_handler(s, lambda s=s: asyncio.create_task(restore(s, loop, manager)))
 
-  def exit_gracefully(self, *args):
-    self.kill_now = True
+    try:
+        loop.run_forever()
+    finally:
+        loop.close()
+
 
 if __name__ == "__main__":
-    killer = GracefulKiller()
-    while not killer.kill_now:
-        try:
-            __init__()
-            main()
-
-        except KeyboardInterrupt:
-            restore()
-    restore()
+    __init__()
+    main()
