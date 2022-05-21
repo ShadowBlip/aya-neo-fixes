@@ -247,10 +247,10 @@ async def restore(signal, loop, manager):
     print('Receved exit signal: '+signal.name+'. Restoring Devices.')
 
     # systemctl stop will trigger here. System shutdown already stops service so we can ignore
-    try:
-        manager.StopUnit('phantom-input.service', 'fail')
-    except dbus.exceptions.DBusException:
-        pass
+    #try:
+    #    manager.StopUnit('phantom-input.service', 'fail')
+    #except dbus.exceptions.DBusException:
+    #    pass
 
     # Both devices threads will attempt this, so ignore if they have been moved.
     try:
@@ -278,11 +278,11 @@ async def restore(signal, loop, manager):
 def main():
 
     # Start the phanton-input service that removes buggy steam-input devices.
-    systemd1 = dbus.SystemBus().get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
-    manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
+    #systemd1 = dbus.SystemBus().get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
+    #manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
 
     # Start the phantom-input service.
-    manager.StartUnit('phantom-input.service', 'fail')
+    #manager.StartUnit('phantom-input.service', 'fail')
 
     # Run asyncio loop to capture all events.
     # TODO: these are deprecated, research and ID new functions.
