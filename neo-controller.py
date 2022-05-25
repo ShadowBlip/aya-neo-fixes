@@ -242,15 +242,9 @@ async def capture_events(device):
 
 
 # Gracefull shutdown.
-async def restore(signal, loop, manager):
+async def restore(signal, loop):
 
     print('Receved exit signal: '+signal.name+'. Restoring Devices.')
-
-    # systemctl stop will trigger here. System shutdown already stops service so we can ignore
-    #try:
-    #    manager.StopUnit('phantom-input.service', 'fail')
-    #except dbus.exceptions.DBusException:
-    #    pass
 
     # Both devices threads will attempt this, so ignore if they have been moved.
     try:
@@ -277,13 +271,6 @@ async def restore(signal, loop, manager):
 # Main loop
 def main():
 
-    # Start the phanton-input service that removes buggy steam-input devices.
-    #systemd1 = dbus.SystemBus().get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
-    #manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
-
-    # Start the phantom-input service.
-    #manager.StartUnit('phantom-input.service', 'fail')
-
     # Run asyncio loop to capture all events.
     # TODO: these are deprecated, research and ID new functions.
     # NOTE: asyncio api will need update to fix. Maybe supress error for clean logs?
@@ -295,7 +282,7 @@ def main():
     # Establish signaling to handle gracefull shutdown.
     signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT, signal.SIGQUIT)
     for s in signals:
-        loop.add_signal_handler(s, lambda s=s: asyncio.create_task(restore(s, loop, manager)))
+        loop.add_signal_handler(s, lambda s=s: asyncio.create_task(restore(s, loop)))
 
     try:
         loop.run_forever()
