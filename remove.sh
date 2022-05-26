@@ -12,7 +12,6 @@ echo "Disabling unmapped buttons."
 systemctl stop neo-controller && systemctl disable neo-controller
 rm -v /etc/systemd/system/neo-controller.service
 rm -v /usr/local/bin/neo-controller.py
-rm -v /usr/local/bin/phantom-input.py
-rm -v /etc/systemd/system/phantom-input.service
+rm -v /etc/udev/rules.d/60-neo-controller.rules 
 
 exit 0
