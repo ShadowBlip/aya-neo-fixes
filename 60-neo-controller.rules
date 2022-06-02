@@ -1,3 +1,2 @@
 # Aya Neo Fixes Controller
-KERNEL=="py-evdev-uinput", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="028e", MODE="0660", TAG+="uaccess"
-KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Aya Neo Controller", MODE="0660", TAG+="uaccess"
+KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Aya Neo Controller", MODE="0660", TAG+="uaccess", ENV{ID_INPUT_JOYSTICK}="1"
