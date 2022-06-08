@@ -12,6 +12,7 @@ import signal
 import sys
 import dbus
 
+from BMI160_i2c import Driver
 from evdev import InputDevice, InputEvent, UInput, ecodes as e, categorize, list_devices
 from pathlib import PurePath as p
 from shutil import move
@@ -29,6 +30,7 @@ tm_pressed = False # Quick Aciton Menu button (GEN1, GEN2)
 win_pressed = False # Dock Button (GEN1)
 
 # Devices
+gyro = Driver(0x68)
 keybd = None
 ui = None
 xb360 = None
@@ -50,6 +52,8 @@ def __init__():
     global xb_event
     global xb_path
     global ui
+
+    xb_caps = None
 
     # Identify the current device type. Kill script if not compatible.
     sys_id = open("/sys/devices/virtual/dmi/id/product_name", "r").read().strip()
@@ -96,15 +100,21 @@ that file with your issue.")
             sleep(1)
             continue
 
+        # Grab the built-in devices. Prevents double input.
         for device in devices_orig:
 
             # Xbox 360 Controller
             if device.name == 'Microsoft X-Box 360 pad' and device.phys == 'usb-0000:03:00.3-4/input0':
                 xb_path = device.path
+                xb360 = InputDevice(xb_path)
+                xb_caps = xb360.capabilities()
+                xb360.grab()
 
             # Keyboard Device
             elif device.name == 'AT Translated Set 2 keyboard' and device.phys == 'isa0060/serio0/input0':
                 kb_path = device.path
+                keybd = InputDevice(kb_path)
+                keybd.grab()
 
         # Sometimes the service loads before all input devices have full initialized. Try a few times.
         if not xb_path or not kb_path:
@@ -120,14 +130,20 @@ If this service has previously been started, try rebooting.\n \
 Exiting...")
         exit(1)
 
-    # Grab the built-in devices. Prevents double input.
-    keybd = InputDevice(kb_path)
-    keybd.grab()
-    xb360 = InputDevice(xb_path)
-    xb360.grab()
+    # Create all capabilities of the controller.
+    caps = {e.EV_ABS: xb_caps[e.EV_ABS],
+            e.EV_FF: xb_caps[e.EV_FF],
+            e.EV_KEY: xb_caps[e.EV_KEY],
+            e.EV_REL: [e.REL_X, e.REL_Y, e.REL_Z, e.REL_RX, e.REL_RY, e.REL_RZ],
+            }
+    
+    # Add additional keys we need.
+    caps[e.EV_KEY].append([e.LEFT_CTRL, e.KEY_ESC, e.KEY_2])
+    for cap in caps:
+        print(cap, caps[cap])
 
     # Create the virtual controller.
-    ui = UInput.from_device(xb360, keybd, name='Aya Neo Controller', bustype=3, vendor=int('045e', base=16), product=int('028e', base=16), version=110)
+    ui = UInput(caps, name='Aya Neo Controller', bustype=3, vendor=int('045e', base=16), product=int('028e', base=16), version=110)
 
     # Move the reference to the original controllers to hide them from the user/steam.
     os.makedirs(hide_path, exist_ok=True)
@@ -229,10 +245,10 @@ async def capture_events(device):
                     tm_pressed = False
 
         # Kill events that we override. Keeps output clean.
-        if ev1.code in [4, 24, 32, 40, 88, 96, 97, 100, 105, 111, 133] and ev1.type in [e.EV_MSC, e.EV_KEY]:
-            continue # Add 1 to list if ESC used above
-        elif ev1.code in [125] and ev2 == None: # Only kill KEY_LEFTMETA if its not used as a key combo.
-            continue
+        #if ev1.code in [4, 24, 32, 40, 88, 96, 97, 100, 105, 111, 133] and ev1.type in [e.EV_MSC, e.EV_KEY]:
+        #    continue # Add 1 to list if ESC used above
+        #elif ev1.code in [125] and ev2 == None: # Only kill KEY_LEFTMETA if its not used as a key combo.
+        #    continue
 
         # Push out all events. Includes all button/joy events from controller we dont override.
         ui.write_event(ev1)
@@ -240,6 +256,23 @@ async def capture_events(device):
             ui.write_event(ev2)
         ui.syn()
 
+# Captures BMI160 events and translates them to virtual device events.
+async def capture_gyro_events(device):
+    
+    while True:
+        data = device.getMotion6()
+        # fetch all gyro and acclerometer values
+        ev0 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_RX, data[0]))
+        ev1 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_RY, data[1]))
+        ev2 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_RZ, data[2]))
+        ev3 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_X, data[3]))
+        ev4 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_Y, data[4]))
+        ev5 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_Z, data[5]))
+        
+        for ev in [ev0, ev1, ev2, ev3, ev4, ev5]:
+            ui.write_event(ev)
+        ui.syn()
+        sleep(0.1)
 
 # Gracefull shutdown.
 async def restore(signal, loop):
@@ -276,7 +309,7 @@ def main():
     # NOTE: asyncio api will need update to fix. Maybe supress error for clean logs?
     for device in xb360, keybd:
         asyncio.ensure_future(capture_events(device))
-
+    asyncio.run(capture_gyro_events(gyro))
     loop = asyncio.get_event_loop()
 
     # Establish signaling to handle gracefull shutdown.
