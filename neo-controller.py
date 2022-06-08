@@ -13,7 +13,7 @@ import sys
 import dbus
 
 from BMI160_i2c import Driver
-from evdev import InputDevice, InputEvent, UInput, ecodes as e, categorize, list_devices
+from evdev import InputDevice, InputEvent, UInput, ecodes as e, categorize, list_devices, RelEvent
 from pathlib import PurePath as p
 from shutil import move
 from time import sleep
@@ -136,11 +136,10 @@ Exiting...")
             e.EV_KEY: xb_caps[e.EV_KEY],
             e.EV_REL: [e.REL_X, e.REL_Y, e.REL_Z, e.REL_RX, e.REL_RY, e.REL_RZ],
             }
-    
+
     # Add additional keys we need.
-    caps[e.EV_KEY].append([e.LEFT_CTRL, e.KEY_ESC, e.KEY_2])
-    for cap in caps:
-        print(cap, caps[cap])
+    for key in [e.KEY_LEFTCTRL, e.KEY_ESC, e.KEY_2]:
+        caps[e.EV_KEY].append(key)
 
     # Create the virtual controller.
     ui = UInput(caps, name='Aya Neo Controller', bustype=3, vendor=int('045e', base=16), product=int('028e', base=16), version=110)
@@ -244,21 +243,15 @@ async def capture_events(device):
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_2, 0)
                     tm_pressed = False
 
-        # Kill events that we override. Keeps output clean.
-        #if ev1.code in [4, 24, 32, 40, 88, 96, 97, 100, 105, 111, 133] and ev1.type in [e.EV_MSC, e.EV_KEY]:
-        #    continue # Add 1 to list if ESC used above
-        #elif ev1.code in [125] and ev2 == None: # Only kill KEY_LEFTMETA if its not used as a key combo.
-        #    continue
-
         # Push out all events. Includes all button/joy events from controller we dont override.
         ui.write_event(ev1)
         if ev2:
             ui.write_event(ev2)
         ui.syn()
 
+
 # Captures BMI160 events and translates them to virtual device events.
 async def capture_gyro_events(device):
-    
     while True:
         data = device.getMotion6()
         # fetch all gyro and acclerometer values
@@ -268,16 +261,16 @@ async def capture_gyro_events(device):
         ev3 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_X, data[3]))
         ev4 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_Y, data[4]))
         ev5 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_Z, data[5]))
-        
+
         for ev in [ev0, ev1, ev2, ev3, ev4, ev5]:
             ui.write_event(ev)
         ui.syn()
-        sleep(0.1)
+        await asyncio.sleep(0.05)
 
 # Gracefull shutdown.
-async def restore(signal, loop):
+async def restore(loop):
 
-    print('Receved exit signal: '+signal.name+'. Restoring Devices.')
+    print("Recieved kill signal. Restoring devices.")
 
     # Both devices threads will attempt this, so ignore if they have been moved.
     try:
@@ -297,6 +290,7 @@ async def restore(signal, loop):
             await task
         except asyncio.CancelledError:
             pass
+
     loop.stop()
     print("Device restore complete. Stopping...")
 
@@ -305,23 +299,24 @@ async def restore(signal, loop):
 def main():
 
     # Run asyncio loop to capture all events.
-    # TODO: these are deprecated, research and ID new functions.
-    # NOTE: asyncio api will need update to fix. Maybe supress error for clean logs?
+    loop = asyncio.get_event_loop()
+    loop.create_future()
     for device in xb360, keybd:
         asyncio.ensure_future(capture_events(device))
-    asyncio.run(capture_gyro_events(gyro))
-    loop = asyncio.get_event_loop()
+    asyncio.ensure_future(capture_gyro_events(gyro))
 
     # Establish signaling to handle gracefull shutdown.
     signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT, signal.SIGQUIT)
     for s in signals:
-        loop.add_signal_handler(s, lambda s=s: asyncio.create_task(restore(s, loop)))
+        loop.add_signal_handler(s, lambda s=s: asyncio.create_task(restore(loop)))
 
     try:
         loop.run_forever()
+    except Exception as e:
+        print("OBJECTION!\n", e)
     finally:
+        loop.stop()
         loop.close()
-
 
 if __name__ == "__main__":
     __init__()
