@@ -29,15 +29,21 @@ def __init__():
 
     devices_orig = [InputDevice(path) for path in list_devices()]
     for device in devices_orig:
-        #if device.name == 'Microsoft X-Box 360 pad' and device.phys == 'usb-0000:03:00.3-4/input0':
-        if device.name == 'AT Translated Set 2 keyboard':
+        if device.name == 'Microsoft X-Box 360 pad' and device.phys == 'usb-0000:03:00.3-4/input0':
             xb360 = InputDevice(device.path)
     
-#    ui = UInput.from_device(xb360, name='test-controller', version=0x3)
- #   ui.capabilities().update(i
-    caps = {e.EV_REL: [e.REL_X, e.REL_Y, e.REL_Z, e.REL_RX, e.REL_RY, e.REL_RZ]}
+    xb_caps = xb360.capabilities()
+    caps = {e.EV_ABS: xb_caps[e.EV_ABS],
+            e.EV_FF: xb_caps[e.EV_FF],
+            e.EV_KEY: xb_caps[e.EV_KEY],
+            e.EV_REL: [e.REL_X, e.REL_Y, e.REL_Z, e.REL_RX, e.REL_RY, e.REL_RZ],
+            }
+    
+    for cap in caps:
+        print(cap, caps[cap])
+
     ui = UInput(caps, name="test", version=0x3)
-   # caps = ui.capabilities()
+    print(ui.capabilities())
 
 # Captures physical device events and translates them to virtual device events.
 async def capture_gyro_events(device):
@@ -47,9 +53,9 @@ async def capture_gyro_events(device):
     while True:
         data = device.getMotion6()
         # fetch all gyro and acclerometer values
-        print({'gx': data[0], 'gy': data[1], 'gz': data[2], 'ax': data[3], 'ay': data[4], 'az': data[5]})
-        print(device.getTemperature())
-        print(device.get_device_id())
+        #print({'gx': data[0], 'gy': data[1], 'gz': data[2], 'ax': data[3], 'ay': data[4], 'az': data[5]})
+        #print(device.getTemperature())
+        #print(device.get_device_id())
         ev0 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_RX, data[0]))
         ev1 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_RY, data[1]))
         ev2 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_RZ, data[2]))
