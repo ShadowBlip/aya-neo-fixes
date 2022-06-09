@@ -138,7 +138,7 @@ Exiting...")
             }
 
     # Add additional keys we need.
-    for key in [e.KEY_LEFTCTRL, e.KEY_ESC, e.KEY_2]:
+    for key in [e.KEY_LEFTCTRL, e.KEY_LEFTMETA, e.KEY_ESC, e.KEY_D, e.KEY_2]:
         caps[e.EV_KEY].append(key)
 
     # Create the virtual controller.
@@ -243,6 +243,13 @@ async def capture_events(device):
                     ev2 = InputEvent(event.sec, event.usec, e.EV_KEY, e.KEY_2, 0)
                     tm_pressed = False
 
+        # May or may not need this later. Save for now, but currently useless as the device doesn't support these keys.
+        # Kill events that we override. Keeps output clean.
+        #if ev1.code in [4, 24, 32, 40, 88, 96, 97, 100, 105, 111, 133] and ev1.type in [e.EV_MSC, e.EV_KEY]:
+        #    continue # Add 1 to list if ESC used above
+        #elif ev1.code in [125] and ev2 == None: # Only kill KEY_LEFTMETA if its not used as a key combo.
+        #    continue
+
         # Push out all events. Includes all button/joy events from controller we dont override.
         ui.write_event(ev1)
         if ev2:
@@ -255,14 +262,14 @@ async def capture_gyro_events(device):
     while True:
         data = device.getMotion6()
         # fetch all gyro and acclerometer values
-        ev0 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_RX, data[0]))
-        ev1 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_RY, data[1]))
-        ev2 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_RZ, data[2]))
-        ev3 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_X, data[3]))
-        ev4 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_Y, data[4]))
-        ev5 = RelEvent(InputEvent(0, 0, e.EV_REL, e.REL_Z, data[5]))
+        ev0 = RelEvent(InputEvent(0, 0, e.EV_ABS, e.ABS_RX, data[0]))
+        ev1 = RelEvent(InputEvent(0, 0, e.EV_ABS, e.ABS_RY, data[1]))
+        #ev2 = RelEvent(InputEvent(0, 0, e.EV_ABS, e.ABS_RZ, data[2]))
+        #ev0 = RelEvent(InputEvent(0, 0, e.EV_ABS, e.ANS_RX, data[3]))
+        #ev1 = RelEvent(InputEvent(0, 0, e.EV_ABS, e.ABS_RY, data[4]))
+        #ev2 = RelEvent(InputEvent(0, 0, e.EV_ABS, e.ABS_RZ, data[5]))
 
-        for ev in [ev0, ev1, ev2, ev3, ev4, ev5]:
+        for ev in [ev0, ev1]: #, ev2]:
             ui.write_event(ev)
         ui.syn()
         await asyncio.sleep(0.05)
@@ -270,7 +277,7 @@ async def capture_gyro_events(device):
 # Gracefull shutdown.
 async def restore(loop):
 
-    print("Recieved kill signal. Restoring devices.")
+    print('Receved exit signal. Restoring Devices.')
 
     # Both devices threads will attempt this, so ignore if they have been moved.
     try:
@@ -290,7 +297,6 @@ async def restore(loop):
             await task
         except asyncio.CancelledError:
             pass
-
     loop.stop()
     print("Device restore complete. Stopping...")
 
@@ -316,7 +322,6 @@ def main():
         print("OBJECTION!\n", e)
     finally:
         loop.stop()
-        loop.close()
 
 if __name__ == "__main__":
     __init__()
