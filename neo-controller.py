@@ -56,24 +56,25 @@ def __init__():
 
     # All devices from Founders edition through 2021 Pro Retro Power use the same 
     # input hardware and keycodes.
-    if sys_id in ["AYANEO 2021 Pro Retro Power",
-            "AYA NEO 2021 Pro Retro Power",
-            "AYANEO 2021 Pro",
-            "AYA NEO 2021 Pro",
-            "AYANEO 2021",
-            "AYA NEO 2021",
-            "AYANEO FOUNDERS",
-            "AYA NEO FOUNDERS",
-            "AYANEO FOUNDER",
+    if sys_id in [
             "AYA NEO FOUNDER",
+            "AYA NEO 2021",
+            "AYANEO 2021",
+            "AYANEO 2021 Pro",
+            "AYANEO 2021 Pro Retro Power",
             ]:
         sys_type = "GEN1"
 
     # NEXT uses new keycodes and has fewer buttons.
-    elif sys_id in ["NEXT",
-            "Next Pro",
-            "AYA NEO NEXT Pro",
+    elif sys_id in [
+            "NEXT",
+            "NEXT Pro",
+            "NEXT Advance",
+            "AYANEO NEXT",
             "AYANEO NEXT Pro",
+            "AYANEO NEXT Advance",
+            "AIR",
+            "AIR Pro",
             ]:
         sys_type = "GEN2"
 
