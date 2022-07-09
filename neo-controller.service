@@ -1,9 +1,0 @@
-[Unit]
-Description=Aya Neo device family controller
-After=graphical-session.target
-
-[Service]
-ExecStart=/sbin/python3 /usr/local/bin/neo-controller.py
-
-[Install]
-WantedBy=multi-user.target
